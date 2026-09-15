@@ -1,8 +1,8 @@
-# Лабораторна робота №1 — варіант {{VARIANT}}
+# Лабораторна робота №1 — варіант 7
 
 Основи Java та модифікатори доступу.
 
-![build](https://github.com/Java-Fall2026/{{REPO}}/actions/workflows/build.yml/badge.svg)
+![build](https://github.com/Java-Fall2026/lab1-Chubei-Artem/actions/workflows/build.yml/badge.svg)
 
 - Умова: https://github.com/Java-Univer-2025/Java-Univer-2025.github.io/blob/main/lab-01/README.md
 - Домени та поля: https://github.com/Java-Univer-2025/Java-Univer-2025.github.io/blob/main/lab-01/tasks_2025_domains.md
