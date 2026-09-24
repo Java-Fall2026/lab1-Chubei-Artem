@@ -20,6 +20,7 @@ application {
 // tasks.withType(JavaExec).configureEach {
 //     defaultCharacterEncoding = 'UTF-8'
 // }
+// WRITE IN TERMINAL B4 RUN 65001; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 tasks.withType(JavaExec).configureEach {
     defaultCharacterEncoding = 'UTF-8'
     jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.stdout.encoding=UTF-8', '-Dsun.stderr.encoding=UTF-8'
