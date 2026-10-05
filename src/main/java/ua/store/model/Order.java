@@ -11,10 +11,10 @@ public class Order extends BaseEntity {
     private final String orderId;
     private final Customer customer;
     private final LocalDate orderDate;
-    private String status;      // ✎
+    private OrderStatus status; // ✎ enum
     private double totalAmount; // ✎
 
-    public Order(String orderId, Customer customer, LocalDate orderDate, String status, double totalAmount) {
+    public Order(String orderId, Customer customer, LocalDate orderDate, OrderStatus status, double totalAmount) {
         super();
         this.orderId = StoreUtils.validateAndNormalizeString(orderId, "Order ID");
         StoreUtils.validateNotNull(customer, "Customer");
@@ -37,12 +37,13 @@ public class Order extends BaseEntity {
         return orderDate;
     }
 
-    public String getStatus() {
+    public OrderStatus getStatus() {
         return status;
     }
 
-    public final void setStatus(String status) {
-        this.status = StoreUtils.validateAndNormalizeStatus(status);
+    public final void setStatus(OrderStatus status) {
+        StoreUtils.validateNotNull(status, "Order status");
+        this.status = status;
     }
 
     public double getTotalAmount() {
@@ -71,9 +72,9 @@ public class Order extends BaseEntity {
     public String toString() {
         return "Order{" +
                 "orderId='" + orderId + '\'' +
-                ", customer=" + customer.getEmail() +
+                ", customer=" + customer.email() + // звернення до record без 'get'
                 ", orderDate=" + orderDate +
-                ", status='" + status + '\'' +
+                ", status=" + status +
                 ", totalAmount=" + totalAmount +
                 ", createdAt=" + createdAt +
                 '}';
