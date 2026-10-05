@@ -3,6 +3,7 @@ package ua.store.util;
 import java.time.LocalDate;
 
 import ua.store.model.OrderItem;
+import ua.store.model.OrderStatus;
 
 public final class StoreUtils {
 
@@ -35,13 +36,6 @@ public final class StoreUtils {
         ValidationHelper.requireNotInFuture(date, "Order date");
     }
 
-    public static String validateAndNormalizeStatus(String status) {
-        ValidationHelper.requireNotBlank(status, "Status");
-        String normalized = FormatHelper.trimAndUpper(status);
-        ValidationHelper.requireInAllowedSet(normalized, ValidationHelper.ALLOWED_STATUSES, "Status");
-        return normalized;
-    }
-
     public static void validateQuantity(int quantity) {
         ValidationHelper.requireInRange(quantity, ValidationHelper.MIN_QUANTITY, ValidationHelper.MAX_QUANTITY, "Quantity");
     }
@@ -56,6 +50,35 @@ public final class StoreUtils {
 
     public static String capitalize(String text) {
         return FormatHelper.capitalize(text);
+    }
+
+    // СВІТЧ-ВИРАЗ 1: по всіх константах enum OrderStatus (повний перебір без default)
+    public static String getProcessingPriority(OrderStatus status) {
+        ValidationHelper.requireNotNull(status, "Status");
+        return switch (status) {
+            case NEW -> "Високий пріоритет: очікується перевірка оплати";
+            case PAID -> "Терміново: замовлення готове до збору на складі";
+            case SHIPPED -> "Звичайний: посилка прямує до покупця";
+            case DELIVERED -> "Низький: замовлення успішно завершено";
+            case CANCELLED -> "В архів: замовлення скасовано";
+        };
+    }
+
+    // СВІТЧ-ВИРАЗ 2: вибір бізнес-поведінки (розрахунок відсотка знижки)
+    public static double calculateOrderDiscountPercent(double totalAmount) {
+        ValidationHelper.requireNonNegative(totalAmount, "Total amount");
+
+        int tier = (totalAmount >= 50000) ? 3 :
+                   (totalAmount >= 20000) ? 2 :
+                   (totalAmount >= 5000)  ? 1 : 0;
+
+        return switch (tier) {
+            case 3 -> 0.15; // 15% для чеків від 50 000 грн
+            case 2 -> 0.10; // 10% для чеків від 20 000 грн
+            case 1 -> 0.05; // 5% для чеків від 5 000 грн
+            case 0 -> 0.00; // без знижки
+            default -> throw new IllegalStateException("Невідома категорія знижки: " + tier);
+        };
     }
 
     public static double lineTotal(OrderItem item) {
