@@ -5,6 +5,13 @@ import java.util.Set;
 
 final class ValidationHelper {
 
+    // Package-private константи правил валідації
+    static final int MIN_QUANTITY = 1;
+    static final int MAX_QUANTITY = 1000;
+    static final Set<String> ALLOWED_STATUSES = Set.of(
+            "NEW", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"
+    );
+
     private ValidationHelper() {
     }
 

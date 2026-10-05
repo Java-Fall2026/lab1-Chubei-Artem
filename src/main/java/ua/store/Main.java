@@ -53,6 +53,7 @@ public class Main {
         OrderItem item2 = new OrderItem(order1, laptop, 3, 30000.0);
         System.out.println("Загальна вартість позиції (3 шт * 30000.0): " + StoreUtils.lineTotal(item2));
         System.out.println("Різниця ціни позиції та поточної ціни товару (30000 - 32000): " + StoreUtils.priceDifference(item2));
+        System.out.println("Відформатована ціна: " + StoreUtils.formatMoney(laptop.getPrice()));
 
         System.out.println("\n=== 7. Перевірка обмеження доступу (коментар) ===");
         // Наступні рядки не скомпілюються (помилка компіляції):

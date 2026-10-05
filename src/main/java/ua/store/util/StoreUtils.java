@@ -1,14 +1,10 @@
 package ua.store.util;
 
-import ua.store.model.OrderItem;
 import java.time.LocalDate;
-import java.util.Set;
+
+import ua.store.model.OrderItem;
 
 public final class StoreUtils {
-
-    private static final Set<String> ALLOWED_STATUSES = Set.of(
-            "NEW", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"
-    );
 
     private StoreUtils() {
     }
@@ -42,19 +38,26 @@ public final class StoreUtils {
     public static String validateAndNormalizeStatus(String status) {
         ValidationHelper.requireNotBlank(status, "Status");
         String normalized = FormatHelper.trimAndUpper(status);
-        ValidationHelper.requireInAllowedSet(normalized, ALLOWED_STATUSES, "Status");
+        ValidationHelper.requireInAllowedSet(normalized, ValidationHelper.ALLOWED_STATUSES, "Status");
         return normalized;
     }
 
     public static void validateQuantity(int quantity) {
-        ValidationHelper.requireInRange(quantity, 1, 1000, "Quantity");
+        ValidationHelper.requireInRange(quantity, ValidationHelper.MIN_QUANTITY, ValidationHelper.MAX_QUANTITY, "Quantity");
     }
 
     public static void validateUnitPrice(double unitPrice) {
         ValidationHelper.requireStrictlyPositive(unitPrice, "Unit price");
     }
 
-    // Два обов'язкові обчислювані методи за варіантом:
+    public static String formatMoney(double amount) {
+        return FormatHelper.formatMoney(amount);
+    }
+
+    public static String capitalize(String text) {
+        return FormatHelper.capitalize(text);
+    }
+
     public static double lineTotal(OrderItem item) {
         ValidationHelper.requireNotNull(item, "OrderItem");
         return item.getQuantity() * item.getUnitPrice();
