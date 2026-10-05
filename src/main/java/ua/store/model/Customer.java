@@ -3,8 +3,8 @@ package ua.store.model;
 import ua.store.util.StoreUtils;
 
 /**
- * Незмінна сутність покупця (record).
- * Усі компоненти є private final за замовчуванням.
+ * Immutable customer record.
+ * Components are private final by default.
  */
 public record Customer(String email, String name, String phone) {
 

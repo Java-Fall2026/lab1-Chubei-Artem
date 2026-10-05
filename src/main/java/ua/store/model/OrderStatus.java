@@ -1,15 +1,15 @@
 package ua.store.model;
 
 /**
- * Статус життєвого циклу замовлення.
- * Містить бізнес-прапорець можливості скасування та опис.
+ * Order lifecycle status.
+ * Contains business flag indicating if cancellation is permitted.
  */
 public enum OrderStatus {
-    NEW(true, "Створено, очікує оплати"),
-    PAID(true, "Оплачено, готується до відправки"),
-    SHIPPED(false, "Відправлено покупцю"),
-    DELIVERED(false, "Доставлено й завершено"),
-    CANCELLED(false, "Скасовано");
+    NEW(true, "Order created, waiting for payment"),
+    PAID(true, "Paid, preparing for packaging"),
+    SHIPPED(false, "Dispatched and in transit"),
+    DELIVERED(false, "Delivered successfully"),
+    CANCELLED(false, "Order cancelled");
 
     private final boolean cancellable;
     private final String description;

@@ -52,19 +52,19 @@ public final class StoreUtils {
         return FormatHelper.capitalize(text);
     }
 
-    // СВІТЧ-ВИРАЗ 1: по всіх константах enum OrderStatus (повний перебір без default)
+    // Switch expression 1: exhaustive by enum constants without default
     public static String getProcessingPriority(OrderStatus status) {
         ValidationHelper.requireNotNull(status, "Status");
         return switch (status) {
-            case NEW -> "Високий пріоритет: очікується перевірка оплати";
-            case PAID -> "Терміново: замовлення готове до збору на складі";
-            case SHIPPED -> "Звичайний: посилка прямує до покупця";
-            case DELIVERED -> "Низький: замовлення успішно завершено";
-            case CANCELLED -> "В архів: замовлення скасовано";
+            case NEW -> "High priority: payment verification pending";
+            case PAID -> "Urgent: prepare warehouse packaging";
+            case SHIPPED -> "Standard: in transit to customer";
+            case DELIVERED -> "Low: completed";
+            case CANCELLED -> "Archived: cancelled order";
         };
     }
 
-    // СВІТЧ-ВИРАЗ 2: вибір бізнес-поведінки (розрахунок відсотка знижки)
+    // Switch expression 2: business rule choice (discount calculation)
     public static double calculateOrderDiscountPercent(double totalAmount) {
         ValidationHelper.requireNonNegative(totalAmount, "Total amount");
 
@@ -73,11 +73,11 @@ public final class StoreUtils {
                    (totalAmount >= 5000)  ? 1 : 0;
 
         return switch (tier) {
-            case 3 -> 0.15; // 15% для чеків від 50 000 грн
-            case 2 -> 0.10; // 10% для чеків від 20 000 грн
-            case 1 -> 0.05; // 5% для чеків від 5 000 грн
-            case 0 -> 0.00; // без знижки
-            default -> throw new IllegalStateException("Невідома категорія знижки: " + tier);
+            case 3 -> 0.15;
+            case 2 -> 0.10;
+            case 1 -> 0.05;
+            case 0 -> 0.00;
+            default -> throw new IllegalStateException("Unexpected discount tier: " + tier);
         };
     }
 
