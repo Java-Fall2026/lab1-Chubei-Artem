@@ -3,6 +3,7 @@ package ua.store.util;
 import java.time.LocalDate;
 
 import ua.store.model.OrderItem;
+import ua.store.model.OrderStatus;
 
 public final class StoreUtils {
 
@@ -35,13 +36,6 @@ public final class StoreUtils {
         ValidationHelper.requireNotInFuture(date, "Order date");
     }
 
-    public static String validateAndNormalizeStatus(String status) {
-        ValidationHelper.requireNotBlank(status, "Status");
-        String normalized = FormatHelper.trimAndUpper(status);
-        ValidationHelper.requireInAllowedSet(normalized, ValidationHelper.ALLOWED_STATUSES, "Status");
-        return normalized;
-    }
-
     public static void validateQuantity(int quantity) {
         ValidationHelper.requireInRange(quantity, ValidationHelper.MIN_QUANTITY, ValidationHelper.MAX_QUANTITY, "Quantity");
     }
@@ -56,6 +50,35 @@ public final class StoreUtils {
 
     public static String capitalize(String text) {
         return FormatHelper.capitalize(text);
+    }
+
+    // Switch expression 1: exhaustive by enum constants without default
+    public static String getProcessingPriority(OrderStatus status) {
+        ValidationHelper.requireNotNull(status, "Status");
+        return switch (status) {
+            case NEW -> "High priority: payment verification pending";
+            case PAID -> "Urgent: prepare warehouse packaging";
+            case SHIPPED -> "Standard: in transit to customer";
+            case DELIVERED -> "Low: completed";
+            case CANCELLED -> "Archived: cancelled order";
+        };
+    }
+
+    // Switch expression 2: business rule choice (discount calculation)
+    public static double calculateOrderDiscountPercent(double totalAmount) {
+        ValidationHelper.requireNonNegative(totalAmount, "Total amount");
+
+        int tier = (totalAmount >= 50000) ? 3 :
+                   (totalAmount >= 20000) ? 2 :
+                   (totalAmount >= 5000)  ? 1 : 0;
+
+        return switch (tier) {
+            case 3 -> 0.15;
+            case 2 -> 0.10;
+            case 1 -> 0.05;
+            case 0 -> 0.00;
+            default -> throw new IllegalStateException("Unexpected discount tier: " + tier);
+        };
     }
 
     public static double lineTotal(OrderItem item) {
