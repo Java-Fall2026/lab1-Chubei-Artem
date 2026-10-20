@@ -1,78 +1,61 @@
 package ua.store;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ua.store.model.Customer;
 import ua.store.model.Order;
-import ua.store.model.OrderItem;
-import ua.store.model.Product;
+import ua.store.model.OrderStatus;
+import ua.store.util.CustomerLoader;
 import ua.store.util.StoreUtils;
 
 public class Main {
 
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
-        System.out.println("=== 1. Створення через фабрику of(...) та конструктор ===");
-        Customer customer1 = Customer.of("  Artem.CHUBEI@Gmail.COM  ", "Артем", "+380501112233");
-        Product laptop = Product.of("PROD-101", "Lenovo ThinkPad", 32000.0);
-        Order order1 = new Order("ORD-0001", customer1, LocalDate.now(), "new", 32000.0);
-        OrderItem item1 = new OrderItem(order1, laptop, 1, 31000.0);
+        log.info("Запуск головної демонстраційної програми ЛР3");
 
-        System.out.println("Створено клієнта: " + customer1);
-        System.out.println("Створено товар: " + laptop);
-        System.out.println("Створено замовлення: " + order1);
-        System.out.println("Створено позицію: " + item1);
+        System.out.println("=== 1. Зчитування CSV з коректними та некоректними рядками ===");
+        Path csvPath = Paths.get("data", "customers.csv");
+        List<Customer> customers = CustomerLoader.loadCustomers(csvPath);
 
-        System.out.println("\n=== 2. Демонстрація нормалізації ===");
-        System.out.println("Оригінальний email: '  Artem.CHUBEI@Gmail.COM  ' -> " + customer1.getEmail());
-        System.out.println("Оригінальний статус: 'new' -> " + order1.getStatus());
-
-        System.out.println("\n=== 3. Демонстрація перехоплення винятків (try/catch) ===");
-        testException("Невалідний email (порожній):", () -> Customer.of("   ", "Іван", "+380"));
-        testException("Невалідна кількість товару (1500 > 1000):", () -> new OrderItem(order1, laptop, 1500, 31000));
-        testException("Невалідний статус замовлення:", () -> order1.setStatus("UNKNOWN_STATUS"));
-
-        System.out.println("\n=== 4. Спроба зіпсувати коректний об'єкт через сеттер ===");
-        System.out.println("Поточна ціна товару: " + laptop.getPrice());
-        try {
-            laptop.setPrice(-500.0);
-        } catch (IllegalArgumentException e) {
-            System.out.println("Перехоплено виняток при зміні ціни: " + e.getMessage());
+        System.out.println("Успішно завантажено клієнтів: " + customers.size());
+        for (Customer c : customers) {
+            System.out.println(" -> " + c);
         }
-        System.out.println("Ціна після невдалої зміни лишилася: " + laptop.getPrice());
 
-        System.out.println("\n=== 5. Порівняння: == vs equals() vs hashCode() ===");
-        Customer customer2 = Customer.of("artem.chubei@gmail.com", "Інше Ім'я", "+380999999999");
-        Customer customer3 = Customer.of("other@gmail.com", "Артем", "+380501112233");
+        System.out.println("\n=== 2. Спроба зчитати відсутній файл (програма не падає) ===");
+        Path missingPath = Paths.get("data", "missing_customers.csv");
+        List<Customer> missingList = CustomerLoader.loadCustomers(missingPath);
+        System.out.println("Результат для неіснуючого файлу: " + missingList.size() + " записів");
 
-        System.out.println("customer1 == customer2: " + (customer1 == customer2) + " (різні посилання в пам'яті)");
-        System.out.println("customer1.equals(customer2): " + customer1.equals(customer2) + " (однаковий email)");
-        System.out.println("customer1.hashCode() == customer2.hashCode(): " + (customer1.hashCode() == customer2.hashCode()));
-        System.out.println("customer1.equals(customer3): " + customer1.equals(customer3) + " (різні email)");
+        System.out.println("\n=== 3. Некоректне значення в сеттері змінюваного класу ===");
+        if (!customers.isEmpty()) {
+            Customer firstCustomer = customers.getFirst();
+            Order order = new Order("ORD-2026-001", firstCustomer, LocalDate.now(), OrderStatus.NEW, 12500.0);
+            System.out.println("Створено початкове замовлення: " + order);
 
-        System.out.println("\n=== 6. Виклик обчислюваних методів у StoreUtils ===");
-        OrderItem item2 = new OrderItem(order1, laptop, 3, 30000.0);
-        System.out.println("Загальна вартість позиції (3 шт * 30000.0): " + StoreUtils.lineTotal(item2));
-        System.out.println("Різниця ціни позиції та поточної ціни товару (30000 - 32000): " + StoreUtils.priceDifference(item2));
-        System.out.println("Відформатована ціна: " + StoreUtils.formatMoney(laptop.getPrice()));
-
-        System.out.println("\n=== 7. Перевірка обмеження доступу (коментар) ===");
-        // Наступні рядки не скомпілюються (помилка компіляції):
-        // ua.store.util.ValidationHelper.requireNotBlank("test", "field");
-        // Причина: ValidationHelper має доступ package-private, тому невидимий за межами пакета ua.store.util.
-
-        // Customer customerPrivate = new Customer("a@b.com", "Test", "123");
-        // Причина: конструктор Customer є private, створення можливе тільки через статичну фабрику of(...).
-
-        // System.out.println(customer1.createdAt);
-        // Причина: createdAt є protected в BaseEntity і видимий напряму тільки нащадкам (усередині класів моделі), але не в сторонньому Main.
-    }
-
-    private static void testException(String description, Runnable action) {
-        try {
-            action.run();
-            System.out.println("ПОМИЛКА: виняток не спрацював!");
-        } catch (IllegalArgumentException e) {
-            System.out.println(description + "\n  -> " + e.getMessage());
+            try {
+                System.out.println("Спроба встановити від'ємну суму (-500.0) через сеттер:");
+                order.setTotalAmount(-500.0);
+            } catch (IllegalArgumentException e) {
+                log.warn("Перехоплено порушення бізнес-правил у сеттері Order: {}", e.getMessage());
+                System.out.println("Перехоплено виняток: " + e.getMessage());
+            }
+            System.out.println("Сума після спроби псування залишилася: " + StoreUtils.formatMoney(order.getTotalAmount()));
         }
+
+        System.out.println("\n=== 4. Логування подій усіх трьох рівнів ===");
+        log.info("Рівень INFO: операція виконана успішно");
+        log.warn("Рівень WARN: попередження про пропущений запис або некритичний збій");
+        log.error("Рівень ERROR: повідомлення про системну помилку введення-виведення");
+
+        log.info("Демонстраційна програма завершила роботу");
     }
 }
