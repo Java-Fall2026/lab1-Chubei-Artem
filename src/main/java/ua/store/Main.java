@@ -1,62 +1,61 @@
 package ua.store;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import ua.store.model.Customer;
 import ua.store.model.Order;
 import ua.store.model.OrderStatus;
-import ua.store.model.Product;
+import ua.store.util.CustomerLoader;
 import ua.store.util.StoreUtils;
 
 public class Main {
 
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
-        System.out.println("=== 1. Створення record Customer і звернення до компонентів ===");
-        Customer customer1 = new Customer("  Artem.CHUBEI@Gmail.COM  ", "Артем", "+380501112233");
-        // Звернення до компонентів без слова 'get'
-        System.out.println("email(): " + customer1.email());
-        System.out.println("name():  " + customer1.name());
-        System.out.println("phone(): " + customer1.phone());
+        log.info("Запуск головної демонстраційної програми ЛР3");
 
-        System.out.println("\n=== 2. Enum: values(), поля константи та valueOf у try/catch ===");
-        System.out.println("Перебір усіх значень OrderStatus.values():");
-        for (OrderStatus status : OrderStatus.values()) {
-            System.out.println(" - " + status.name() + " | Опис: \"" + status.getDescription() 
-                    + "\" | Можна скасувати: " + status.isCancellable());
+        System.out.println("=== 1. Зчитування CSV з коректними та некоректними рядками ===");
+        Path csvPath = Paths.get("data", "customers.csv");
+        List<Customer> customers = CustomerLoader.loadCustomers(csvPath);
+
+        System.out.println("Успішно завантажено клієнтів: " + customers.size());
+        for (Customer c : customers) {
+            System.out.println(" -> " + c);
         }
 
-        try {
-            System.out.println("\nСпроба викликати OrderStatus.valueOf(\"INVALID_STATUS\"):");
-            OrderStatus.valueOf("INVALID_STATUS");
-        } catch (IllegalArgumentException e) {
-            System.out.println("  -> Перехоплено очікуваний виняток: " + e.getMessage());
+        System.out.println("\n=== 2. Спроба зчитати відсутній файл (програма не падає) ===");
+        Path missingPath = Paths.get("data", "missing_customers.csv");
+        List<Customer> missingList = CustomerLoader.loadCustomers(missingPath);
+        System.out.println("Результат для неіснуючого файлу: " + missingList.size() + " записів");
+
+        System.out.println("\n=== 3. Некоректне значення в сеттері змінюваного класу ===");
+        if (!customers.isEmpty()) {
+            Customer firstCustomer = customers.getFirst();
+            Order order = new Order("ORD-2026-001", firstCustomer, LocalDate.now(), OrderStatus.NEW, 12500.0);
+            System.out.println("Створено початкове замовлення: " + order);
+
+            try {
+                System.out.println("Спроба встановити від'ємну суму (-500.0) через сеттер:");
+                order.setTotalAmount(-500.0);
+            } catch (IllegalArgumentException e) {
+                log.warn("Перехоплено порушення бізнес-правил у сеттері Order: {}", e.getMessage());
+                System.out.println("Перехоплено виняток: " + e.getMessage());
+            }
+            System.out.println("Сума після спроби псування залишилася: " + StoreUtils.formatMoney(order.getTotalAmount()));
         }
 
-        System.out.println("\n=== 3. Робота двох switch-виразів у StoreUtils ===");
-        Product laptop = Product.of("PROD-101", "Lenovo ThinkPad", 32000.0);
-        Order order = new Order("ORD-0001", customer1, LocalDate.now(), OrderStatus.NEW, 32000.0);
+        System.out.println("\n=== 4. Логування подій усіх трьох рівнів ===");
+        log.info("Рівень INFO: операція виконана успішно");
+        log.warn("Рівень WARN: попередження про пропущений запис або некритичний збій");
+        log.error("Рівень ERROR: повідомлення про системну помилку введення-виведення");
 
-        String priority = StoreUtils.getProcessingPriority(order.getStatus());
-        double discount = StoreUtils.calculateOrderDiscountPercent(order.getTotalAmount());
-        System.out.println("Switch 1 (пріоритет за статусом " + order.getStatus() + "): " + priority);
-        System.out.println("Switch 2 (знижка на чек " + StoreUtils.formatMoney(order.getTotalAmount()) + "): " 
-                + (discount * 100) + "%");
-
-        System.out.println("\n=== 4. Record з невалідними даними (компактний конструктор) ===");
-        try {
-            new Customer("   ", "Іван", "+380");
-        } catch (IllegalArgumentException e) {
-            System.out.println("  -> Виняток із компактного конструктора record: " + e.getMessage());
-        }
-
-        System.out.println("\n=== 5. Порівняння двох однакових record (equals та hashCode) ===");
-        Customer customer2 = new Customer("artem.chubei@gmail.com", "Артем", "+380501112233");
-        System.out.println("customer1 == customer2: " + (customer1 == customer2) + " (різні екземпляри)");
-        System.out.println("customer1.equals(customer2): " + customer1.equals(customer2) + " (згенерований equals)");
-        System.out.println("customer1.hashCode() == customer2.hashCode(): " 
-                + (customer1.hashCode() == customer2.hashCode()) + " (згенерований hashCode)");
-
-        System.out.println("\n=== 6. Вивід record через згенерований toString() ===");
-        System.out.println("customer1: " + customer1);
+        log.info("Демонстраційна програма завершила роботу");
     }
 }
