@@ -42,3 +42,12 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+tasks.register('runBenchmark', JavaExec) {
+    group = 'application'
+    description = 'Runs SearchBenchmark on 100,000 items'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ua.store.repository.SearchBenchmark'
+    defaultCharacterEncoding = 'UTF-8'
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.stdout.encoding=UTF-8', '-Dsun.stderr.encoding=UTF-8', '-Xms512m', '-Xmx2g'
+}
