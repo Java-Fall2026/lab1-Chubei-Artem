@@ -1,12 +1,17 @@
 package ua.store.model;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.Objects;
 
 import ua.common.BaseEntity;
 import ua.store.util.StoreUtils;
 
-public class Order extends BaseEntity {
+public class Order extends BaseEntity implements Comparable<Order> {
+
+    private static final Comparator<Order> NATURAL_ORDER = Comparator
+            .comparingDouble(Order::getTotalAmount)
+            .thenComparing(Order::getOrderId);
 
     private final String orderId;
     private final Customer customer;
@@ -55,10 +60,24 @@ public class Order extends BaseEntity {
         this.totalAmount = totalAmount;
     }
 
+    /**
+     * Natural order: by totalAmount ascending, then by unique orderId to stay
+     * consistent with equals.
+     */
+    @Override
+    public int compareTo(Order other) {
+        Objects.requireNonNull(other, "Cannot compare Order with null");
+        return NATURAL_ORDER.compare(this, other);
+    }
+
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Order order = (Order) o;
         return Objects.equals(orderId, order.orderId);
     }
@@ -70,13 +89,13 @@ public class Order extends BaseEntity {
 
     @Override
     public String toString() {
-        return "Order{" +
-                "orderId='" + orderId + '\'' +
-                ", customer=" + customer.email() + // звернення до record без 'get'
-                ", orderDate=" + orderDate +
-                ", status=" + status +
-                ", totalAmount=" + totalAmount +
-                ", createdAt=" + createdAt +
-                '}';
+        return "Order{"
+                + "orderId='" + orderId + '\''
+                + ", customer=" + customer.email()
+                + ", orderDate=" + orderDate
+                + ", status=" + status
+                + ", totalAmount=" + totalAmount
+                + ", createdAt=" + createdAt
+                + '}';
     }
 }
