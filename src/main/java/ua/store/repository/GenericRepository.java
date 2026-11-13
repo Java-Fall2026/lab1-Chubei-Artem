@@ -1,11 +1,13 @@
 package ua.store.repository;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,6 +124,45 @@ public class GenericRepository<T> {
      */
     public List<T> findAll() {
         return List.copyOf(storage.values());
+    }
+
+    /**
+     * Returns a sequential Stream over the elements in this repository. Unlike
+     * findAll(), which returns a defensive copy (List.copyOf) to protect
+     * internal state from external modification, this method provides a live
+     * view of the data. The stream should be consumed immediately and not
+     * stored.
+     */
+    public Stream<T> stream() {
+        return storage.values().stream();
+    }
+
+    /**
+     * Returns all elements sorted according to the provided Comparator.
+     */
+    public List<T> findAllSorted(Comparator<T> comparator) {
+        Objects.requireNonNull(comparator, "Comparator must not be null");
+        return stream()
+                .sorted(comparator)
+                .toList();
+    }
+
+    /**
+     * Returns all elements sorted by their extracted identity in ASC or DESC
+     * order.
+     */
+    public List<T> findAllSortedByIdentity(SortOrder order) {
+        Objects.requireNonNull(order, "SortOrder must not be null");
+        Comparator<String> keyComparator = order == SortOrder.ASC
+                ? Comparator.naturalOrder()
+                : Comparator.reverseOrder();
+
+        List<T> result = storage.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(keyComparator))
+                .map(Map.Entry::getValue)
+                .toList();
+        log.info("[{}] Sorted elements by identity ({}), count={}", name, order, result.size());
+        return result;
     }
 
     /**
