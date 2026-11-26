@@ -113,22 +113,24 @@ class DomainRepositoriesStreamTest {
     }
 
     @Test
-    @DisplayName("6. Stream search methods filter accurately by text, range, and multiple conditions")
+    @DisplayName("6. Product search methods filter accurately including exact price range boundaries")
     void testSearchMethodsAccuracy() {
-        productRepo.add(Product.of("SKU-1", "Gaming Mouse", 1200.0));
-        productRepo.add(Product.of("SKU-2", "Gaming Chair", 9500.0));
-        productRepo.add(Product.of("SKU-3", "Office Mouse", 400.0));
+        productRepo.add(Product.of("SKU-OUT-LOW", "Below Min", 999.99));
+        productRepo.add(Product.of("SKU-MIN", "Gaming Mouse Min", 1000.0));
+        productRepo.add(Product.of("SKU-MID", "Gaming Keyboard Mid", 3000.0));
+        productRepo.add(Product.of("SKU-MAX", "Office Mouse Max", 5000.0));
+        productRepo.add(Product.of("SKU-OUT-HIGH", "Gaming Chair High", 5000.01));
 
         List<Product> byText = productRepo.findByTitleContaining("mouse");
         List<Product> byRange = productRepo.findByPriceRange(1000.0, 5000.0);
         List<Product> byTwoCond = productRepo.findByTitlePrefixAndMaxPrice("Gaming", 5000.0, 5);
 
-        assertAll("Product search methods",
+        assertAll("Product search methods and boundary checks",
                 () -> assertEquals(2, byText.size()),
-                () -> assertEquals(1, byRange.size()),
-                () -> assertEquals("SKU-1", byRange.get(0).getSku()),
-                () -> assertEquals(1, byTwoCond.size()),
-                () -> assertEquals("SKU-1", byTwoCond.get(0).getSku())
+                () -> assertEquals(List.of("SKU-MIN", "SKU-MID", "SKU-MAX"),
+                        byRange.stream().map(Product::getSku).toList()),
+                () -> assertEquals(List.of("SKU-MIN", "SKU-MID"),
+                        byTwoCond.stream().map(Product::getSku).toList())
         );
     }
 
@@ -180,5 +182,30 @@ class DomainRepositoriesStreamTest {
                 stream::count
         );
         assertNotNull(ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("11. Order search methods filter accurately by customer email, date range, and status with min amount")
+    void testOrderSearchMethodsAccuracy() {
+        Customer c1 = new Customer("artem.dev@gmail.com", "Artem", "+380501112233");
+        Customer c2 = new Customer("olena.qa@ukr.net", "Olena", "+380672223344");
+
+        orderRepo.add(new Order("ORD-1", c1, LocalDate.of(2026, 10, 9), OrderStatus.PAID, 6000.0));
+        orderRepo.add(new Order("ORD-2", c1, LocalDate.of(2026, 10, 10), OrderStatus.PAID, 4500.0));
+        orderRepo.add(new Order("ORD-3", c2, LocalDate.of(2026, 10, 15), OrderStatus.NEW, 7000.0));
+        orderRepo.add(new Order("ORD-4", c2, LocalDate.of(2026, 10, 20), OrderStatus.PAID, 8000.0));
+        orderRepo.add(new Order("ORD-5", c1, LocalDate.of(2026, 10, 21), OrderStatus.PAID, 9000.0));
+
+        List<Order> byEmail = orderRepo.findByCustomerEmailContaining("artem");
+        List<Order> byDateRange = orderRepo.findByDateRange(LocalDate.of(2026, 10, 10), LocalDate.of(2026, 10, 20));
+        List<Order> byStatusAndAmount = orderRepo.findByStatusAndMinAmount(OrderStatus.PAID, 6000.0);
+
+        assertAll("Order repository search methods",
+                () -> assertEquals(3, byEmail.size()),
+                () -> assertEquals(List.of("ORD-2", "ORD-3", "ORD-4"),
+                        byDateRange.stream().map(Order::getOrderId).toList()),
+                () -> assertEquals(List.of("ORD-1", "ORD-4", "ORD-5"),
+                        byStatusAndAmount.stream().map(Order::getOrderId).toList())
+        );
     }
 }

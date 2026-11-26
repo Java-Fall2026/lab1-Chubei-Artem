@@ -55,9 +55,17 @@ public class Main {
         System.out.println("Товари за природним порядком (ціна ASC, потім SKU):");
         naturalProducts.forEach(p -> System.out.println("  " + p.getSku() + " | " + p.getTitle() + " | " + p.getPrice() + " грн"));
 
+        System.out.println("Сортування товарів за назвою (sortByTitleAsc):");
+        productRepo.sortByTitleAsc()
+                .forEach(p -> System.out.println("  " + p.getTitle() + " (" + p.getSku() + ") | " + p.getPrice() + " грн"));
+
         System.out.println("Багаторівневе сортування товарів (ціна DESC, потім назва ASC):");
         productRepo.sortByPriceDescThenTitleAsc()
                 .forEach(p -> System.out.println("  " + p.getPrice() + " грн | " + p.getTitle() + " (" + p.getSku() + ")"));
+
+        System.out.println("Сортування замовлень за датою (sortByDateAsc):");
+        orderRepo.sortByDateAsc()
+                .forEach(o -> System.out.println("  " + o.getOrderDate() + " | " + o.getOrderId() + " | " + o.getTotalAmount() + " грн"));
 
         System.out.println("Багаторівневе сортування замовлень (статус ASC, потім сума DESC):");
         orderRepo.sortByStatusThenAmountDesc()
@@ -79,18 +87,33 @@ public class Main {
         System.out.println("Кількість елементів у TreeSet: " + priceOnlyTreeSet.size() + " -> залишився лише: " + priceOnlyTreeSet.iterator().next().getTitle());
 
         // === 5. Stream API search methods ===
-        System.out.println("\n=== 5. Пошук через Stream API ===");
-        System.out.println("Товари зі словом 'Gaming': " + productRepo.findByTitleContaining("gaming").size());
-        System.out.println("Товари в діапазоні [1000 .. 4000] грн: " + productRepo.findByPriceRange(1000.0, 4000.0).size());
-        System.out.println("Товари за префіксом 'Gaming' і ціною <= 15000 (limit 1): "
-                + productRepo.findByTitlePrefixAndMaxPrice("Gaming", 15000.0, 1).size());
+        System.out.println("\n=== 5. Пошук через Stream API (вивід знайдених елементів) ===");
+
+        List<Product> gamingProducts = productRepo.findByTitleContaining("gaming");
+        System.out.println("Товари зі словом 'Gaming' (" + gamingProducts.size() + " шт.):");
+        gamingProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
+
+        List<Product> rangeProducts = productRepo.findByPriceRange(1000.0, 4000.0);
+        System.out.println("Товари в діапазоні [1000 .. 4000] грн (" + rangeProducts.size() + " шт.):");
+        rangeProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
+
+        List<Product> prefixAndPriceProducts = productRepo.findByTitlePrefixAndMaxPrice("Gaming", 15000.0, 1);
+        System.out.println("Товари за префіксом 'Gaming' і ціною <= 15000, limit 1 (" + prefixAndPriceProducts.size() + " шт.):");
+        prefixAndPriceProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
+
         System.out.println("Унікальні назви товарів (map + distinct + sorted): " + productRepo.findDistinctTitles());
 
-        System.out.println("Замовлення клієнта 'artem': " + orderRepo.findByCustomerEmailContaining("artem").size());
-        System.out.println("Замовлення за період [2026-10-11 .. 2026-10-18]: "
-                + orderRepo.findByDateRange(LocalDate.of(2026, 10, 11), LocalDate.of(2026, 10, 18)).size());
-        System.out.println("Замовлення зі статусом PAID та сумою >= 5000 грн: "
-                + orderRepo.findByStatusAndMinAmount(OrderStatus.PAID, 5000.0).size());
+        List<Order> artemOrders = orderRepo.findByCustomerEmailContaining("artem");
+        System.out.println("Замовлення клієнта 'artem' (" + artemOrders.size() + " шт.):");
+        artemOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getCustomer().email() + " | " + o.getTotalAmount() + " грн"));
+
+        List<Order> dateRangeOrders = orderRepo.findByDateRange(LocalDate.of(2026, 10, 11), LocalDate.of(2026, 10, 18));
+        System.out.println("Замовлення за період [2026-10-11 .. 2026-10-18] (" + dateRangeOrders.size() + " шт.):");
+        dateRangeOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getOrderDate() + " | " + o.getTotalAmount() + " грн"));
+
+        List<Order> paidHighOrders = orderRepo.findByStatusAndMinAmount(OrderStatus.PAID, 5000.0);
+        System.out.println("Замовлення зі статусом PAID та сумою >= 5000 грн (" + paidHighOrders.size() + " шт.):");
+        paidHighOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getStatus() + " | " + o.getTotalAmount() + " грн"));
 
         // === 6. Optional (without isPresent + get) ===
         System.out.println("\n=== 6. Робота з Optional (без isPresent + get) ===");
