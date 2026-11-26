@@ -1,25 +1,32 @@
 package ua.store;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import ua.store.exception.InvalidDataException;
 import ua.store.model.Customer;
 import ua.store.model.Order;
 import ua.store.model.OrderItem;
 import ua.store.model.OrderStatus;
 import ua.store.model.Product;
+import ua.store.storage.DataLoader;
 import ua.store.util.CustomerLoader;
 import ua.store.util.StoreUtils;
 
 class CustomerLoaderTest {
+
+    private final Validator validator = DataLoader.createDefaultValidator();
 
     @Test
     @DisplayName("Should successfully parse a valid CSV line into Customer record")
@@ -50,26 +57,22 @@ class CustomerLoaderTest {
     }
 
     @Test
-    @DisplayName("Should throw InvalidDataException with cause when validation fails on blank field")
-    void testParseExceptionOnBlankEmail() {
+    @DisplayName("Should detect blank email via Jakarta Validation after parsing CSV line")
+    void testParseBlankEmailDetectedByValidator() throws InvalidDataException {
         String invalidLine = ",Максим,+380931234567";
+        Customer customer = CustomerLoader.parseCustomerFromLine(invalidLine, 5);
 
-        InvalidDataException exception = assertThrows(
-                InvalidDataException.class,
-                () -> CustomerLoader.parseCustomerFromLine(invalidLine, 5)
-        );
-
-        assertNotNull(exception.getCause());
-        assertTrue(exception.getCause() instanceof IllegalArgumentException);
-        assertTrue(exception.getMessage().contains("validation failed"));
+        Set<ConstraintViolation<Customer>> violations = validator.validate(customer);
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("email")));
     }
 
     @Test
     @DisplayName("Should correctly calculate line total for OrderItem")
     void testCalculatedMethodLineTotal() {
         Customer customer = new Customer("test@store.ua", "Test", "+38000");
-        Order order = new Order("ORD-1", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
-        Product product = Product.of("SKU-1", "Mouse", 250.0);
+        Order order = new Order("ORD-001", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
+        Product product = Product.of("SKU-001", "Mouse", 250.0);
         OrderItem item = new OrderItem(order, product, 3, 250.0);
 
         double total = StoreUtils.lineTotal(item);
@@ -80,8 +83,8 @@ class CustomerLoaderTest {
     @DisplayName("Should correctly calculate price difference for OrderItem")
     void testCalculatedMethodPriceDifference() {
         Customer customer = new Customer("test@store.ua", "Test", "+38000");
-        Order order = new Order("ORD-1", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
-        Product product = Product.of("SKU-1", "Mouse", 300.0);
+        Order order = new Order("ORD-001", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
+        Product product = Product.of("SKU-001", "Mouse", 300.0);
         OrderItem item = new OrderItem(order, product, 1, 260.0);
 
         double diff = StoreUtils.priceDifference(item);
@@ -89,13 +92,15 @@ class CustomerLoaderTest {
     }
 
     @Test
-    @DisplayName("Should throw IllegalArgumentException when modifying Order total with negative amount")
-    void testOrderInvalidSetterThrowsException() {
+    @DisplayName("Should detect negative totalAmount via Jakarta Validation when modifying Order")
+    void testOrderInvalidSetterDetectedByValidator() {
         Customer customer = new Customer("test@store.ua", "Test", "+38000");
-        Order order = new Order("ORD-1", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
+        Order order = new Order("ORD-001", customer, LocalDate.now(), OrderStatus.NEW, 500.0);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> order.setTotalAmount(-100.0));
-        assertNotNull(ex.getMessage());
+        order.setTotalAmount(-100.0);
+        Set<ConstraintViolation<Order>> violations = validator.validate(order);
+
+        assertFalse(violations.isEmpty());
+        assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("totalAmount")));
     }
 }

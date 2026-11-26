@@ -4,30 +4,58 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.Objects;
 
-import ua.common.BaseEntity;
-import ua.store.util.StoreUtils;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
+import ua.common.BaseEntity;
+import ua.store.validation.ValidOrderStatusAmount;
+
+@ValidOrderStatusAmount
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Order extends BaseEntity implements Comparable<Order> {
 
     private static final Comparator<Order> NATURAL_ORDER = Comparator
             .comparingDouble(Order::getTotalAmount)
             .thenComparing(Order::getOrderId);
 
+    @NotBlank(message = "Номер замовлення не може бути порожнім")
+    @Pattern(regexp = "^ORD-\\d{3,}$", message = "Номер замовлення має відповідати формату ORD-XXX (мінімум 3 цифри)")
     private final String orderId;
-    private final Customer customer;
-    private final LocalDate orderDate;
-    private OrderStatus status; // ✎ enum
-    private double totalAmount; // ✎
 
-    public Order(String orderId, Customer customer, LocalDate orderDate, OrderStatus status, double totalAmount) {
+    @NotNull(message = "Клієнт замовлення обов'язковий")
+    @Valid
+    private final Customer customer;
+
+    @NotNull(message = "Дата замовлення обов'язкова")
+    @PastOrPresent(message = "Дата замовлення не може бути у майбутньому")
+    private final LocalDate orderDate;
+
+    @NotNull(message = "Статус замовлення обов'язковий")
+    private OrderStatus status;
+
+    @PositiveOrZero(message = "Загальна сума замовлення не може бути від'ємною")
+    private double totalAmount;
+
+    @JsonCreator
+    public Order(
+            @JsonProperty("orderId") String orderId,
+            @JsonProperty("customer") Customer customer,
+            @JsonProperty("orderDate") LocalDate orderDate,
+            @JsonProperty("status") OrderStatus status,
+            @JsonProperty("totalAmount") double totalAmount) {
         super();
-        this.orderId = StoreUtils.validateAndNormalizeString(orderId, "Order ID");
-        StoreUtils.validateNotNull(customer, "Customer");
+        this.orderId = (orderId != null) ? orderId.trim() : null;
         this.customer = customer;
-        StoreUtils.validateOrderDate(orderDate);
         this.orderDate = orderDate;
-        setStatus(status);
-        setTotalAmount(totalAmount);
+        this.status = status;
+        this.totalAmount = totalAmount;
     }
 
     public String getOrderId() {
@@ -47,7 +75,6 @@ public class Order extends BaseEntity implements Comparable<Order> {
     }
 
     public final void setStatus(OrderStatus status) {
-        StoreUtils.validateNotNull(status, "Order status");
         this.status = status;
     }
 
@@ -56,7 +83,6 @@ public class Order extends BaseEntity implements Comparable<Order> {
     }
 
     public final void setTotalAmount(double totalAmount) {
-        StoreUtils.validateTotalAmount(totalAmount);
         this.totalAmount = totalAmount;
     }
 
@@ -91,7 +117,7 @@ public class Order extends BaseEntity implements Comparable<Order> {
     public String toString() {
         return "Order{"
                 + "orderId='" + orderId + '\''
-                + ", customer=" + customer.email()
+                + ", customer=" + (customer != null ? customer.email() : "null")
                 + ", orderDate=" + orderDate
                 + ", status=" + status
                 + ", totalAmount=" + totalAmount

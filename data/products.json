@@ -1,0 +1,82 @@
+[
+    {
+        "sku": "SKU-101",
+        "title": "Mechanical Keyboard Pro",
+        "price": 3200.00
+    },
+    {
+        "sku": "SKU-102",
+        "title": "Wireless Gaming Mouse",
+        "price": 1850.50
+    },
+    {
+        "sku": "SKU-103",
+        "title": "27-inch IPS Monitor 144Hz",
+        "price": 11499.00
+    },
+    {
+        "sku": "SKU-104",
+        "title": "USB-C Braided Cable 2m",
+        "price": 349.99
+    },
+    {
+        "sku": "SKU-105",
+        "title": "Noise Cancelling Headphones",
+        "price": 4590.00
+    },
+    {
+        "sku": "BAD-01",
+        "title": "Invalid SKU Format Item",
+        "price": 900.00
+    },
+    {
+        "sku": "SKU-106",
+        "title": "Ergonomic Laptop Stand",
+        "price": 1250.00
+    },
+    {
+        "sku": "SKU-107",
+        "title": "A",
+        "price": 750.00
+    },
+    {
+        "sku": "SKU-108",
+        "title": "4K Streaming Webcam",
+        "price": 2890.00
+    },
+    {
+        "sku": "SKU-109",
+        "title": "Negative Price SSD 1TB",
+        "price": -150.00
+    },
+    {
+        "sku": "SKU-110",
+        "title": "NVMe SSD 1TB Gen4",
+        "price": 3450.00
+    },
+    {
+        "sku": "SKU-101",
+        "title": "Duplicate Mechanical Keyboard",
+        "price": 3100.00
+    },
+    {
+        "sku": "SKU-111",
+        "title": "Wi-Fi 6E Dual-Band Router",
+        "price": 4100.00
+    },
+    {
+        "sku": "SKU-112",
+        "title": "Portable Power Bank 20000mAh",
+        "price": 1690.00
+    },
+    {
+        "sku": "SKU-113",
+        "title": "USB Condenser Microphone",
+        "price": 2300.00
+    },
+    {
+        "sku": "SKU-114",
+        "title": "RGB Desk Mat XL",
+        "price": 620.00
+    }
+]
