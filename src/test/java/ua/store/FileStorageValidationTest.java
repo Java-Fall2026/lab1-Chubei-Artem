@@ -153,7 +153,7 @@ class FileStorageValidationTest {
     }
 
     @Test
-    @DisplayName("7. DataLoader adds only valid records and collects all validation violations in LoadResult")
+    @DisplayName("7. DataLoader adds only valid records and groups all validation violations per record in LoadResult")
     void testDataLoaderFiltersInvalidRecords(@TempDir Path tempDir) throws IOException {
         Path file = tempDir.resolve("invalid_products.json");
         FileStorage<Product> storage = new FileStorage<>(Product.class);
@@ -167,15 +167,17 @@ class FileStorageValidationTest {
         storage.save(file, items);
 
         ProductRepository repo = new ProductRepository();
-        DataLoader<Product> loader = new DataLoader<>(storage, validator);
-        LoadResult result = loader.loadInto(file, repo);
+        LoadResult result;
+        try (DataLoader<Product> loader = new DataLoader<>(storage, validator)) {
+            result = loader.loadInto(file, repo);
+        }
 
         assertAll("Invalid records filtering verification",
                 () -> assertEquals(4, result.totalRead()),
                 () -> assertEquals(2, result.addedCount()),
                 () -> assertEquals(2, repo.size()),
-                // 1 (BAD-SKU) + 2 (SKU-102 title & price) = 3 validation rejections
-                () -> assertEquals(3, result.rejectedCount())
+                () -> assertEquals(2, result.rejectedCount()),
+                () -> assertEquals(2, result.rejected().get(1).errors().size())
         );
     }
 
@@ -192,15 +194,17 @@ class FileStorageValidationTest {
         storage.save(file, items);
 
         ProductRepository repo = new ProductRepository();
-        DataLoader<Product> loader = new DataLoader<>(storage, validator);
-        LoadResult result = loader.loadInto(file, repo);
+        LoadResult result;
+        try (DataLoader<Product> loader = new DataLoader<>(storage, validator)) {
+            result = loader.loadInto(file, repo);
+        }
 
         assertAll("Duplicate identity handling verification",
                 () -> assertEquals(2, result.totalRead()),
                 () -> assertEquals(1, result.addedCount()),
                 () -> assertEquals(1, repo.size()),
                 () -> assertEquals(1, result.rejectedCount()),
-                () -> assertEquals("duplicate", result.rejected().get(0).field())
+                () -> assertTrue(result.rejected().get(0).errors().get(0).startsWith("duplicate:"))
         );
     }
 
@@ -212,10 +216,12 @@ class FileStorageValidationTest {
         Path missingFile = tempDir.resolve("does_not_exist.yaml");
 
         ProductRepository repo = new ProductRepository();
-        DataLoader<Product> loader = new DataLoader<>(Product.class);
-
-        LoadResult brokenResult = loader.loadInto(brokenFile, repo);
-        LoadResult missingResult = loader.loadInto(missingFile, repo);
+        LoadResult brokenResult;
+        LoadResult missingResult;
+        try (DataLoader<Product> loader = new DataLoader<>(Product.class)) {
+            brokenResult = loader.loadInto(brokenFile, repo);
+            missingResult = loader.loadInto(missingFile, repo);
+        }
 
         assertAll("Safe failure handling on unreadable files",
                 () -> assertEquals(0, brokenResult.totalRead()),

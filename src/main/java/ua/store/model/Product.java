@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import ua.common.BaseEntity;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties({"createdAt"})
 public class Product extends BaseEntity implements Comparable<Product> {
 
     private static final Comparator<Product> NATURAL_ORDER = Comparator

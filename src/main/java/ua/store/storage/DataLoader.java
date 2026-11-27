@@ -21,35 +21,47 @@ import ua.store.repository.GenericRepository;
 /**
  * Loads entities from JSON/YAML files using FileStorage, validates them with
  * Jakarta Validation, adds valid unique entities to a repository, and collects
- * detailed rejection reasons without failing.
+ * one RejectedRecord per invalid/duplicate record without failing.
  *
  * @param <T> domain entity type
  */
-public class DataLoader<T> {
+public class DataLoader<T> implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
 
     private final FileStorage<T> storage;
     private final Validator validator;
+    private final ValidatorFactory ownedFactory;
 
     public DataLoader(FileStorage<T> storage, Validator validator) {
         this.storage = Objects.requireNonNull(storage, "FileStorage must not be null");
         this.validator = Objects.requireNonNull(validator, "Validator must not be null");
+        this.ownedFactory = null;
     }
 
     public DataLoader(Class<T> type) {
-        this(new FileStorage<>(type), createDefaultValidator());
+        this.storage = new FileStorage<>(type);
+        this.ownedFactory = Validation.buildDefaultValidatorFactory();
+        this.validator = this.ownedFactory.getValidator();
     }
 
     public static Validator createDefaultValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        return factory.getValidator();
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            return factory.getValidator();
+        }
+    }
+
+    @Override
+    public void close() {
+        if (ownedFactory != null) {
+            ownedFactory.close();
+        }
     }
 
     /**
-     * Loads records from the given file into the target repository. Invalid
-     * records, duplicates, and unreadable files are captured in LoadResult
-     * without throwing.
+     * Loads records from the given file into the target repository. Each
+     * invalid or duplicate record produces a single RejectedRecord containing
+     * all of its errors.
      */
     public LoadResult loadInto(Path file, GenericRepository<T> repository) {
         Objects.requireNonNull(file, "File path must not be null");
@@ -83,28 +95,33 @@ public class DataLoader<T> {
 
             Set<ConstraintViolation<T>> violations = validator.validate(item);
             if (!violations.isEmpty()) {
-                List<ConstraintViolation<T>> sortedViolations = violations.stream()
+                List<String> recordErrors = violations.stream()
                         .sorted(Comparator.comparing((ConstraintViolation<T> v) -> v.getPropertyPath().toString())
                                 .thenComparing(ConstraintViolation::getMessage))
+                        .map(v -> {
+                            String path = v.getPropertyPath().toString();
+                            String fieldName = path.isBlank() ? "object" : path;
+                            return fieldName + ": " + v.getMessage();
+                        })
                         .toList();
 
-                for (ConstraintViolation<T> violation : sortedViolations) {
-                    String path = violation.getPropertyPath().toString();
-                    String fieldName = path.isBlank() ? "object" : path;
-                    RejectedRecord rejection = new RejectedRecord(recordNumber, fieldName, violation.getMessage());
-                    rejected.add(rejection);
-                    log.warn("[{}] Rejected record: {}", repository.getName(), rejection);
-                }
+                RejectedRecord rejection = new RejectedRecord(recordNumber, recordErrors);
+                rejected.add(rejection);
+                log.warn("[{}] Rejected record: {}", repository.getName(), rejection);
                 continue;
             }
 
             try {
                 repository.add(item);
                 addedCount++;
-            } catch (DuplicateIdentityException | IllegalArgumentException e) {
+            } catch (DuplicateIdentityException e) {
                 RejectedRecord dupRejection = new RejectedRecord(recordNumber, "duplicate", e.getMessage());
                 rejected.add(dupRejection);
                 log.warn("[{}] Rejected record: {}", repository.getName(), dupRejection);
+            } catch (IllegalArgumentException e) {
+                RejectedRecord argRejection = new RejectedRecord(recordNumber, "repository", e.getMessage());
+                rejected.add(argRejection);
+                log.warn("[{}] Rejected record: {}", repository.getName(), argRejection);
             }
         }
 

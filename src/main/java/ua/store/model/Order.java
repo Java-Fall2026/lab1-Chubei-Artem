@@ -18,7 +18,7 @@ import ua.common.BaseEntity;
 import ua.store.validation.ValidOrderStatusAmount;
 
 @ValidOrderStatusAmount
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties({"createdAt"})
 public class Order extends BaseEntity implements Comparable<Order> {
 
     private static final Comparator<Order> NATURAL_ORDER = Comparator

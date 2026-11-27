@@ -5,9 +5,9 @@
    > "Для варіанту 7 (Інтернет-магазин) реалізуй узагальнений клас FileStorage<T> з enum DataFormat для JSON і YAML, додай стандартні та власну перехресну анотації Jakarta Validation на моделі Product і Order, створи DataLoader із записом результату LoadResult та 10 юніт-тестів JUnit 5 з використанням @TempDir".
 
 2. **Що AI зробив неправильно:**
-   - **Серіалізація поля `createdAt` із `BaseEntity`:** Спочатку згенеровані класи `Product` та `Order` не мали анотації `@JsonIgnoreProperties(ignoreUnknown = true)`, через що при повторному завантаженні щойно збереженого файлу Jackson падав із `UnrecognizedPropertyException` на полі `createdAt`, успадкованому від `BaseEntity`.
-   - **Зупинка на першому порушенні при валідації запису:** У першій версії `DataLoader` асистент створював лише один запис `RejectedRecord` на об'єкт через `violations.iterator().next()`, хоча за вимогою завдання необхідно фіксувати всі порушення для кожного невалідного запису (номер запису, поле та повідомлення).
+   - **Надто широке ігнорування полів Jackson та неповна звірка у `Main`:** Спочатку асистент використав `@JsonIgnoreProperties(ignoreUnknown = true)` замість ігнорування лише поля `createdAt` (що мовчки пропускало б одруківки у файлах), а звірку після повторного завантаження в `Main` зробив через `equals`, який порівнює лише `sku` і не помічає зміни ціни.
+   - **Підрахунок окремих порушень замість відкинутих записів:** У першій версії `DataLoader` створював окремий `RejectedRecord` на кожне порушення валідації (через що запис із двома помилками рахувався двічі) і не закривав `ValidatorFactory`.
 
-3. **Що було виправлено самостійно:**
-   - Додано анотацію `@JsonIgnoreProperties(ignoreUnknown = true)` до класів `Product` та `Order`, що забезпечило коректне повторне читання збережених файлів.
-   - Перероблено цикл обробки `ConstraintViolation` у `DataLoader`, щоб кожне порушення валідації додавалося окремим елементом у список `rejected` із фіксацією номера запису, назви поля та повідомлення українською мовою.
+3. **Що було виправлено:**
+   - Замінено `@JsonIgnoreProperties(ignoreUnknown = true)` на `@JsonIgnoreProperties({"createdAt"})` у `Product` і `Order`, а в `Main` реалізовано повну звірку всіх полів (`sku`, `title`, `price`) та англомовне логування.
+   - Перероблено `RejectedRecord` так, щоб один відкинутий запис групував усі свої помилки у список, розділено обробку `DuplicateIdentityException` та `IllegalArgumentException`, а також додано `AutoCloseable` у `DataLoader` для закриття `ValidatorFactory` через `try-with-resources`.
