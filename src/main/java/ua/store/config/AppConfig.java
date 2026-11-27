@@ -51,4 +51,16 @@ public final class AppConfig {
     public Path getRequiredPath(String key) {
         return Path.of(getRequiredString(key));
     }
+
+    public int getRequiredInt(String key) {
+        String value = properties.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Missing required configuration key: " + key);
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Configuration key '" + key + "' must be an integer, got: " + value, e);
+        }
+    }
 }

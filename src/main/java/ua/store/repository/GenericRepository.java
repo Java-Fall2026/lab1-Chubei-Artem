@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -15,8 +17,8 @@ import org.slf4j.LoggerFactory;
 import ua.store.exception.DuplicateIdentityException;
 
 /**
- * Generic in-memory repository managing domain entities by their unique
- * business identity.
+ * Thread-safe generic in-memory repository managing domain entities by their
+ * unique business identity.
  *
  * @param <T> entity type
  */
@@ -27,6 +29,7 @@ public class GenericRepository<T> {
     private final String name;
     private final IdentityExtractor<T> extractor;
     private final Map<String, T> storage = new LinkedHashMap<>();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
      * Primary constructor accepting custom repository name.
@@ -48,34 +51,71 @@ public class GenericRepository<T> {
     }
 
     /**
-     * Adds an item. Throws DuplicateIdentityException if identity already
-     * exists.
+     * Extracts and validates the unique business identity of the given entity.
      */
-    public void add(T item) {
-        String identity = validateAndExtractIdentity(item);
-        if (storage.containsKey(identity)) {
-            log.warn("[{}] Rejected duplicate identity '{}'", name, identity);
-            throw new DuplicateIdentityException(
-                    "Duplicate identity '" + identity + "' in repository '" + name + "'"
-            );
-        }
-        storage.put(identity, item);
-        log.info("[{}] Successfully added item with identity '{}'", name, identity);
+    public String identityOf(T item) {
+        return validateAndExtractIdentity(item);
     }
 
     /**
-     * Adds item if its identity is not present yet. Returns true if added,
-     * false otherwise.
+     * Atomically adds an item. Throws DuplicateIdentityException if identity
+     * already exists.
+     */
+    public void add(T item) {
+        String identity = validateAndExtractIdentity(item);
+        lock.writeLock().lock();
+        try {
+            if (storage.containsKey(identity)) {
+                log.warn("[{}] Rejected duplicate identity '{}'", name, identity);
+                throw new DuplicateIdentityException(
+                        "Duplicate identity '" + identity + "' in repository '" + name + "'"
+                );
+            }
+            storage.put(identity, item);
+            log.info("[{}] Successfully added item with identity '{}'", name, identity);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Atomically adds item if its identity is not present yet. Returns true if
+     * added, false otherwise.
      */
     public boolean addIfAbsent(T item) {
         String identity = validateAndExtractIdentity(item);
-        if (storage.containsKey(identity)) {
-            log.warn("[{}] Duplicate identity '{}' ignored by addIfAbsent", name, identity);
-            return false;
+        lock.writeLock().lock();
+        try {
+            if (storage.containsKey(identity)) {
+                log.warn("[{}] Duplicate identity '{}' ignored by addIfAbsent", name, identity);
+                return false;
+            }
+            storage.put(identity, item);
+            log.info("[{}] Added item with identity '{}' via addIfAbsent", name, identity);
+            return true;
+        } finally {
+            lock.writeLock().unlock();
         }
-        storage.put(identity, item);
-        log.info("[{}] Added item with identity '{}' via addIfAbsent", name, identity);
-        return true;
+    }
+
+    /**
+     * Atomically replaces an existing item having the same identity. If no item
+     * with that identity exists, nothing is added and false is returned.
+     */
+    public boolean replace(T item) {
+        String identity = validateAndExtractIdentity(item);
+        lock.writeLock().lock();
+        try {
+            if (!storage.containsKey(identity)) {
+                log.warn("[{}] Cannot replace non-existent identity '{}'", name, identity);
+                return false;
+            }
+            storage.put(identity, item);
+            log.info("[{}] Replaced item with identity '{}'", name, identity);
+            return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /**
@@ -89,17 +129,23 @@ public class GenericRepository<T> {
     }
 
     /**
-     * Removes item by identity. Returns true if removed, false otherwise.
+     * Atomically removes item by identity. Returns true if removed, false
+     * otherwise.
      */
     public boolean removeByIdentity(String identity) {
         validateIdentityString(identity);
-        T removed = storage.remove(identity);
-        if (removed != null) {
-            log.info("[{}] Removed item with identity '{}'", name, identity);
-            return true;
-        } else {
-            log.warn("[{}] Cannot remove non-existent identity '{}'", name, identity);
-            return false;
+        lock.writeLock().lock();
+        try {
+            T removed = storage.remove(identity);
+            if (removed != null) {
+                log.info("[{}] Removed item with identity '{}'", name, identity);
+                return true;
+            } else {
+                log.warn("[{}] Cannot remove non-existent identity '{}'", name, identity);
+                return false;
+            }
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 
@@ -108,33 +154,40 @@ public class GenericRepository<T> {
      */
     public Optional<T> findByIdentity(String identity) {
         validateIdentityString(identity);
-        T item = storage.get(identity);
-        if (item != null) {
-            log.info("[{}] Found item with identity '{}'", name, identity);
-            return Optional.of(item);
-        } else {
-            log.warn("[{}] Item with identity '{}' not found", name, identity);
-            return Optional.empty();
+        lock.readLock().lock();
+        try {
+            T item = storage.get(identity);
+            if (item != null) {
+                log.info("[{}] Found item with identity '{}'", name, identity);
+                return Optional.of(item);
+            } else {
+                log.warn("[{}] Item with identity '{}' not found", name, identity);
+                return Optional.empty();
+            }
+        } finally {
+            lock.readLock().unlock();
         }
     }
 
     /**
      * Returns an unmodifiable snapshot list of all elements to protect internal
-     * state.
+     * state and prevent ConcurrentModificationException across threads.
      */
     public List<T> findAll() {
-        return List.copyOf(storage.values());
+        lock.readLock().lock();
+        try {
+            return List.copyOf(storage.values());
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
-     * Returns a sequential Stream over the elements in this repository. Unlike
-     * findAll(), which returns a defensive copy (List.copyOf) to protect
-     * internal state from external modification, this method provides a live
-     * view of the data. The stream should be consumed immediately and not
-     * stored.
+     * Returns a sequential Stream over a thread-safe snapshot of elements in
+     * this repository.
      */
     public Stream<T> stream() {
-        return storage.values().stream();
+        return findAll().stream();
     }
 
     /**
@@ -157,24 +210,34 @@ public class GenericRepository<T> {
                 ? Comparator.naturalOrder()
                 : Comparator.reverseOrder();
 
-        List<T> result = storage.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(keyComparator))
-                .map(Map.Entry::getValue)
-                .toList();
-        log.info("[{}] Sorted elements by identity ({}), count={}", name, order, result.size());
-        return result;
+        lock.readLock().lock();
+        try {
+            List<T> result = storage.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey(keyComparator))
+                    .map(Map.Entry::getValue)
+                    .toList();
+            log.info("[{}] Sorted elements by identity ({}), count={}", name, order, result.size());
+            return result;
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
      * Returns current count of stored items.
      */
     public int size() {
-        return storage.size();
+        lock.readLock().lock();
+        try {
+            return storage.size();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     private String validateAndExtractIdentity(T item) {
         if (item == null) {
-            throw new IllegalArgumentException("Cannot add null item to repository '" + name + "'");
+            throw new IllegalArgumentException("Item must not be null in repository '" + name + "'");
         }
         String identity = extractor.identityOf(item);
         validateIdentityString(identity);
