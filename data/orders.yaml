@@ -1,0 +1,143 @@
+- orderId: "ORD-001"
+  customer:
+    email: "artem.chubei@gmail.com"
+    name: "Артем Чубей"
+    phone: "+380501112233"
+  orderDate: "2026-10-05"
+  status: "PAID"
+  totalAmount: 3200.00
+
+- orderId: "ORD-002"
+  customer:
+    email: "olena.petrenko@ukr.net"
+    name: "Олена Петренко"
+    phone: "+380672223344"
+  orderDate: "2026-10-08"
+  status: "DELIVERED"
+  totalAmount: 11499.00
+
+- orderId: "ORD-003"
+  customer:
+    email: "dmytro.koval@gmail.com"
+    name: "Дмитро Коваль"
+    phone: "+380633334455"
+  orderDate: "2026-10-12"
+  status: "NEW"
+  totalAmount: 1850.50
+
+- orderId: "ORD-004"
+  customer:
+    email: "iryna.melnyk@ukr.net"
+    name: "Ірина Мельник"
+    phone: "+380954445566"
+  orderDate: "2026-10-14"
+  status: "SHIPPED"
+  totalAmount: 4590.00
+
+- orderId: "ORD-005"
+  customer:
+    email: "not-a-valid-email"
+    name: "Тарас Бондар"
+    phone: "+380505556677"
+  orderDate: "2026-10-15"
+  status: "NEW"
+  totalAmount: 1250.00
+
+- orderId: "ORD-006"
+  customer:
+    email: "sofiia.tkachenko@gmail.com"
+    name: "Софія Ткаченко"
+    phone: "+380676667788"
+  orderDate: "2026-10-18"
+  status: "CANCELLED"
+  totalAmount: 0.00
+
+- orderId: "ORD-007"
+  customer:
+    email: "maksym.shevchenko@ukr.net"
+    name: "Максим Шевченко"
+    phone: "+380937778899"
+  orderDate: "2027-05-20"
+  status: "NEW"
+  totalAmount: 2890.00
+
+- orderId: "ORD-008"
+  customer:
+    email: "natalia.kravchenko@gmail.com"
+    name: "Наталія Кравченко"
+    phone: "+380508889900"
+  orderDate: "2026-10-21"
+  status: "PAID"
+  totalAmount: 3450.00
+
+- orderId: "ORD-009"
+  customer:
+    email: "bohdan.savchenko@ukr.net"
+    name: "Богдан Савченко"
+    phone: "+380679990011"
+  orderDate: "2026-10-24"
+  status: "PAID"
+  totalAmount: 0.00
+
+- orderId: "ORD-010"
+  customer:
+    email: "kateryna.moroz@gmail.com"
+    name: "Катерина Мороз"
+    phone: "+380631010101"
+  orderDate: "2026-10-26"
+  status: "DELIVERED"
+  totalAmount: 4100.00
+
+- orderId: "ORD-001"
+  customer:
+    email: "duplicate.user@gmail.com"
+    name: "Дублікат Замовлення"
+    phone: "+380501212121"
+  orderDate: "2026-10-27"
+  status: "NEW"
+  totalAmount: 999.00
+
+- orderId: "BAD-ORDER"
+  customer:
+    email: "andrii.lysenko@ukr.net"
+    name: "Андрій Лисенко"
+    phone: "+380952323232"
+  orderDate: "2026-10-28"
+  status: "NEW"
+  totalAmount: 1690.00
+
+- orderId: "ORD-011"
+  customer:
+    email: "yuliia.boiko@gmail.com"
+    name: "Юлія Бойко"
+    phone: "+380673434343"
+  orderDate: "2026-11-01"
+  status: "SHIPPED"
+  totalAmount: 2300.00
+
+- orderId: "ORD-012"
+  customer:
+    email: "oleksandr.rudenko@ukr.net"
+    name: "Олександр Руденко"
+    phone: "+380504545454"
+  orderDate: "2026-11-02"
+  status: "PAID"
+  totalAmount: 620.00
+
+- orderId: "ORD-013"
+  customer:
+    email: "viktoriia.poliakova@gmail.com"
+    name: "Вікторія Полякова"
+    phone: "+380635656565"
+  orderDate: "2026-11-05"
+  status: "DELIVERED"
+  totalAmount: 5400.00
+
+- orderId: "ORD-014"
+  customer:
+    email: "roman.havryliuk@ukr.net"
+    name: "Роман Гаврилюк"
+    phone: "+380956767676"
+  orderDate: "2026-11-10"
+  status: "NEW"
+  totalAmount: 890.00

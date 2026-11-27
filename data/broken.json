@@ -1,0 +1,9 @@
+[
+    {
+        "sku": "SKU-901",
+        "title": "Valid Item Before Syntax Error",
+        "price": 1200.00
+    },
+    {
+        "sku": "SKU-902",
+        "title": "Broken JSON missing closing bracket and comma""price": 500.00

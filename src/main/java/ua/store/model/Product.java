@@ -3,24 +3,43 @@ package ua.store.model;
 import java.util.Comparator;
 import java.util.Objects;
 
-import ua.common.BaseEntity;
-import ua.store.util.StoreUtils;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import ua.common.BaseEntity;
+
+@JsonIgnoreProperties({"createdAt"})
 public class Product extends BaseEntity implements Comparable<Product> {
 
     private static final Comparator<Product> NATURAL_ORDER = Comparator
             .comparingDouble(Product::getPrice)
             .thenComparing(Product::getSku);
 
+    @NotBlank(message = "Артикул товару (SKU) не може бути порожнім")
+    @Pattern(regexp = "^SKU-\\d{3,}$", message = "Артикул має відповідати формату SKU-XXX (мінімум 3 цифри)")
     private final String sku;
-    private final String title;
-    private double price; // ✎
 
-    private Product(String sku, String title, double price) {
+    @NotBlank(message = "Назва товару не може бути порожньою")
+    @Size(min = 2, max = 100, message = "Назва товару повинна містити від 2 до 100 символів")
+    private final String title;
+
+    @Positive(message = "Ціна товару має бути суворо більшою за 0")
+    private double price;
+
+    @JsonCreator
+    public Product(
+            @JsonProperty("sku") String sku,
+            @JsonProperty("title") String title,
+            @JsonProperty("price") double price) {
         super();
-        this.sku = StoreUtils.validateAndNormalizeString(sku, "Product SKU");
-        this.title = StoreUtils.validateAndNormalizeString(title, "Product title");
-        setPrice(price);
+        this.sku = (sku != null) ? sku.trim() : null;
+        this.title = (title != null) ? title.trim() : null;
+        this.price = price;
     }
 
     public static Product of(String sku, String title, double price) {
@@ -40,7 +59,6 @@ public class Product extends BaseEntity implements Comparable<Product> {
     }
 
     public final void setPrice(double price) {
-        StoreUtils.validatePrice(price);
         this.price = price;
     }
 

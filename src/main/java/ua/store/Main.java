@@ -1,161 +1,133 @@
 package ua.store;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Stream;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ua.store.model.Customer;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import ua.store.config.AppConfig;
 import ua.store.model.Order;
-import ua.store.model.OrderStatus;
 import ua.store.model.Product;
 import ua.store.repository.OrderRepository;
 import ua.store.repository.ProductRepository;
-import ua.store.repository.SortOrder;
+import ua.store.storage.DataLoader;
+import ua.store.storage.FileStorage;
+import ua.store.storage.LoadResult;
 
 public class Main {
 
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        log.info("Запуск демонстраційної програми ЛР5: Comparable, Comparator та Stream API");
+        log.info("Starting Lab 6 demo application: Files, Serialization, and Validation");
 
-        // === 1. Populate domain repositories ===
-        System.out.println("=== 1. Наповнення доменних репозиторіїв ProductRepository та OrderRepository ===");
-        ProductRepository productRepo = new ProductRepository();
-        productRepo.add(Product.of("SKU-105", "Gaming Mouse", 1500.50));
-        productRepo.add(Product.of("SKU-101", "Mechanical Keyboard", 3200.00));
-        productRepo.add(Product.of("SKU-103", "Gaming Monitor", 12500.00));
-        productRepo.add(Product.of("SKU-102", "USB-C Cable", 299.99));
-        productRepo.add(Product.of("SKU-104", "Wireless Headset", 3200.00)); // Same price as SKU-101
-
-        Customer c1 = new Customer("artem.chubei@gmail.com", "Артем", "+380501112233");
-        Customer c2 = new Customer("olena.petrenko@ukr.net", "Олена", "+380672223344");
-
-        OrderRepository orderRepo = new OrderRepository();
-        orderRepo.add(new Order("ORD-003", c1, LocalDate.of(2026, 10, 15), OrderStatus.NEW, 4700.50));
-        orderRepo.add(new Order("ORD-001", c2, LocalDate.of(2026, 10, 10), OrderStatus.PAID, 12500.00));
-        orderRepo.add(new Order("ORD-004", c1, LocalDate.of(2026, 10, 20), OrderStatus.PAID, 1500.50));
-        orderRepo.add(new Order("ORD-002", c2, LocalDate.of(2026, 10, 12), OrderStatus.DELIVERED, 3200.00));
-
-        System.out.println("Завантажено товарів: " + productRepo.size() + ", замовлень: " + orderRepo.size());
-
-        // === 2. Sorting ===
-        System.out.println("\n=== 2. Сортування за природним порядком (Comparable) та доменними критеріями ===");
-        List<Product> naturalProducts = new ArrayList<>(productRepo.findAll());
-        Collections.sort(naturalProducts);
-        System.out.println("Товари за природним порядком (ціна ASC, потім SKU):");
-        naturalProducts.forEach(p -> System.out.println("  " + p.getSku() + " | " + p.getTitle() + " | " + p.getPrice() + " грн"));
-
-        System.out.println("Сортування товарів за назвою (sortByTitleAsc):");
-        productRepo.sortByTitleAsc()
-                .forEach(p -> System.out.println("  " + p.getTitle() + " (" + p.getSku() + ") | " + p.getPrice() + " грн"));
-
-        System.out.println("Багаторівневе сортування товарів (ціна DESC, потім назва ASC):");
-        productRepo.sortByPriceDescThenTitleAsc()
-                .forEach(p -> System.out.println("  " + p.getPrice() + " грн | " + p.getTitle() + " (" + p.getSku() + ")"));
-
-        System.out.println("Сортування замовлень за датою (sortByDateAsc):");
-        orderRepo.sortByDateAsc()
-                .forEach(o -> System.out.println("  " + o.getOrderDate() + " | " + o.getOrderId() + " | " + o.getTotalAmount() + " грн"));
-
-        System.out.println("Багаторівневе сортування замовлень (статус ASC, потім сума DESC):");
-        orderRepo.sortByStatusThenAmountDesc()
-                .forEach(o -> System.out.println("  " + o.getStatus() + " | " + o.getTotalAmount() + " грн | " + o.getOrderId()));
-
-        // === 3. findAllSortedByIdentity in both directions ===
-        System.out.println("\n=== 3. Сортування за identity (ASC та DESC) ===");
-        System.out.println("Товари за SKU (ASC): " + productRepo.findAllSortedByIdentity(SortOrder.ASC).stream().map(Product::getSku).toList());
-        System.out.println("Товари за SKU (DESC): " + productRepo.findAllSortedByIdentity(SortOrder.DESC).stream().map(Product::getSku).toList());
-
-        // === 4. TreeSet behavior with a custom comparator not aligned with equals ===
-        System.out.println("\n=== 4. Демонстрація TreeSet із компаратором, не узгодженим з equals ===");
-        Set<Product> priceOnlyTreeSet = new TreeSet<>(Comparator.comparingDouble(Product::getPrice));
-        Product pKeyboard = Product.of("SKU-101", "Mechanical Keyboard", 3200.00);
-        Product pHeadset = Product.of("SKU-104", "Wireless Headset", 3200.00);
-        priceOnlyTreeSet.add(pKeyboard);
-        priceOnlyTreeSet.add(pHeadset);
-        System.out.println("Додано 2 різні об'єкти (equals=" + pKeyboard.equals(pHeadset) + ") з однаковою ціною 3200.00 грн.");
-        System.out.println("Кількість елементів у TreeSet: " + priceOnlyTreeSet.size() + " -> залишився лише: " + priceOnlyTreeSet.iterator().next().getTitle());
-
-        // === 5. Stream API search methods ===
-        System.out.println("\n=== 5. Пошук через Stream API (вивід знайдених елементів) ===");
-
-        List<Product> gamingProducts = productRepo.findByTitleContaining("gaming");
-        System.out.println("Товари зі словом 'Gaming' (" + gamingProducts.size() + " шт.):");
-        gamingProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
-
-        List<Product> rangeProducts = productRepo.findByPriceRange(1000.0, 4000.0);
-        System.out.println("Товари в діапазоні [1000 .. 4000] грн (" + rangeProducts.size() + " шт.):");
-        rangeProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
-
-        List<Product> prefixAndPriceProducts = productRepo.findByTitlePrefixAndMaxPrice("Gaming", 15000.0, 1);
-        System.out.println("Товари за префіксом 'Gaming' і ціною <= 15000, limit 1 (" + prefixAndPriceProducts.size() + " шт.):");
-        prefixAndPriceProducts.forEach(p -> System.out.println("  - " + p.getSku() + ": " + p.getTitle() + " (" + p.getPrice() + " грн)"));
-
-        System.out.println("Унікальні назви товарів (map + distinct + sorted): " + productRepo.findDistinctTitles());
-
-        List<Order> artemOrders = orderRepo.findByCustomerEmailContaining("artem");
-        System.out.println("Замовлення клієнта 'artem' (" + artemOrders.size() + " шт.):");
-        artemOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getCustomer().email() + " | " + o.getTotalAmount() + " грн"));
-
-        List<Order> dateRangeOrders = orderRepo.findByDateRange(LocalDate.of(2026, 10, 11), LocalDate.of(2026, 10, 18));
-        System.out.println("Замовлення за період [2026-10-11 .. 2026-10-18] (" + dateRangeOrders.size() + " шт.):");
-        dateRangeOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getOrderDate() + " | " + o.getTotalAmount() + " грн"));
-
-        List<Order> paidHighOrders = orderRepo.findByStatusAndMinAmount(OrderStatus.PAID, 5000.0);
-        System.out.println("Замовлення зі статусом PAID та сумою >= 5000 грн (" + paidHighOrders.size() + " шт.):");
-        paidHighOrders.forEach(o -> System.out.println("  - " + o.getOrderId() + " | " + o.getStatus() + " | " + o.getTotalAmount() + " грн"));
-
-        // === 6. Optional (without isPresent + get) ===
-        System.out.println("\n=== 6. Робота з Optional (без isPresent + get) ===");
-        String foundCheapTitle = productRepo.findFirstCheaperThan(500.0)
-                .map(Product::getTitle)
-                .orElse("Не знайдено");
-        System.out.println("Перший товар дешевше 500 грн (через map + orElse): " + foundCheapTitle);
-
-        String missingProductTitle = productRepo.findFirstCheaperThan(50.0)
-                .map(Product::getTitle)
-                .orElseGet(() -> "Товарів дешевше 50 грн у каталозі немає");
-        System.out.println("Пошук товару дешевше 50 грн (через map + orElseGet): " + missingProductTitle);
-
-        orderRepo.findFirstByStatus(OrderStatus.CANCELLED)
-                .ifPresentOrElse(
-                        o -> System.out.println("Знайдено скасоване замовлення: " + o.getOrderId()),
-                        () -> System.out.println("Скасованих замовлень (CANCELLED) не виявлено (через ifPresentOrElse)")
-                );
-
-        // === 7. Grouping and Aggregation ===
-        System.out.println("\n=== 7. Групування (groupingBy) та агрегація (reduce / sum) ===");
-        Map<String, List<Product>> byPriceTier = productRepo.groupByPriceCategory();
-        byPriceTier.forEach((tier, list) -> System.out.println("  Категорія " + tier + ": " + list.size() + " шт."));
-        System.out.println("Загальна вартість каталогу товарів (reduce): " + productRepo.calculateTotalCatalogValue() + " грн");
-
-        Map<OrderStatus, Long> countsByStatus = orderRepo.countByStatus();
-        System.out.println("Кількість замовлень за статусами (groupingBy + counting): " + countsByStatus);
-        System.out.println("Загальна виручка за всіма замовленнями (sum): " + orderRepo.calculateTotalRevenue() + " грн");
-
-        // === 8. Stream<T> ===
-        System.out.println("\n=== 8. Демонстрація одноразовості вже спожитого Stream<T> ===");
-        Stream<Product> productStream = productRepo.stream();
-        long firstCount = productStream.count();
-        System.out.println("Перший прохід стріму успішний, елементів: " + firstCount);
+        // === 1. Reading configuration from app.properties ===
+        System.out.println("=== 1. Читання конфігурації з app.properties ===");
+        AppConfig config;
         try {
-            long secondCount = productStream.count();
-            System.out.println("Другий прохід: " + secondCount);
-        } catch (IllegalStateException e) {
-            log.error("Перехоплено очікуваний виняток при повторному читанні стріму: {}", e.getMessage());
-            System.out.println("-> Помилка повторного читання стріму перехоплена: " + e.getMessage());
+            config = AppConfig.fromClasspath("app.properties");
+        } catch (IOException e) {
+            log.error("Critical configuration loading error: {}", e.getMessage());
+            return;
         }
 
-        log.info("Демонстраційна програма ЛР5 успішно завершила роботу");
+        Path productsPath = config.getRequiredPath("data.products.file");
+        Path ordersPath = config.getRequiredPath("data.orders.file");
+        Path brokenPath = config.getRequiredPath("data.broken.file");
+        Path updatedProductsPath = config.getRequiredPath("data.output.products.file");
+
+        System.out.println("Шлях до товарів (JSON): " + productsPath);
+        System.out.println("Шлях до замовлень (YAML): " + ordersPath);
+        System.out.println("Шлях до пошкодженого файлу: " + brokenPath);
+        System.out.println("Шлях для збереження оновленого каталогу: " + updatedProductsPath);
+
+        try (ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            Validator validator = validatorFactory.getValidator();
+
+            // === 2. Loading JSON and YAML files with validation ===
+            System.out.println("\n=== 2. Завантаження файлів даних із валідацією та відбраковкою ===");
+            ProductRepository productRepo = new ProductRepository();
+            OrderRepository orderRepo = new OrderRepository();
+
+            FileStorage<Product> productStorage = new FileStorage<>(Product.class);
+            FileStorage<Order> orderStorage = new FileStorage<>(Order.class);
+
+            try (DataLoader<Product> productLoader = new DataLoader<>(productStorage, validator); DataLoader<Order> orderLoader = new DataLoader<>(orderStorage, validator)) {
+
+                LoadResult productsResult = productLoader.loadInto(productsPath, productRepo);
+                System.out.printf("Файл %s -> прочитано: %d, додано: %d, відкинуто: %d%n",
+                        productsPath, productsResult.totalRead(), productsResult.addedCount(), productsResult.rejectedCount());
+
+                LoadResult ordersResult = orderLoader.loadInto(ordersPath, orderRepo);
+                System.out.printf("Файл %s -> прочитано: %d, додано: %d, відкинуто: %d%n",
+                        ordersPath, ordersResult.totalRead(), ordersResult.addedCount(), ordersResult.rejectedCount());
+
+                // === 3. Printing rejected records line by line ===
+                System.out.println("\n=== 3. Список відкинутих записів ===");
+                System.out.println("Відкинуті записи товарів (" + productsResult.rejectedCount() + "):");
+                productsResult.rejected().forEach(r -> System.out.println("  " + r));
+
+                System.out.println("Відкинуті записи замовлень (" + ordersResult.rejectedCount() + "):");
+                ordersResult.rejected().forEach(r -> System.out.println("  " + r));
+
+                // === 4. Attempting to load broken.json ===
+                System.out.println("\n=== 4. Спроба завантажити синтаксично пошкоджений файл broken.json ===");
+                LoadResult brokenResult = productLoader.loadInto(brokenPath, productRepo);
+                System.out.printf("Файл %s -> прочитано: %d, додано: %d, відкинуто: %d%n",
+                        brokenPath, brokenResult.totalRead(), brokenResult.addedCount(), brokenResult.rejectedCount());
+                brokenResult.rejected().forEach(r -> System.out.println("  " + r));
+
+                // === 5. Modifying repository content and saving to a new file ===
+                System.out.println("\n=== 5. Зміна вмісту репозиторію товарів та збереження у новий YAML-файл ===");
+                productRepo.removeByIdentity("SKU-104");
+                productRepo.findByIdentity("SKU-101").ifPresent(p -> p.setPrice(3499.00));
+                productRepo.add(Product.of("SKU-200", "Mechanical Numpad Wireless", 1450.00));
+
+                List<Product> updatedProducts = productRepo.findAll();
+                try {
+                    productStorage.save(updatedProductsPath, updatedProducts);
+                    log.info("Updated product catalog ({} items) saved to '{}'",
+                            updatedProducts.size(), updatedProductsPath);
+                    System.out.println("Збережено товарів у " + updatedProductsPath + ": " + updatedProducts.size() + " шт.");
+                } catch (IOException e) {
+                    log.error("Failed to save updated product catalog: {}", e.getMessage());
+                    return;
+                }
+
+                // === 6. Reloading the saved file and verifying consistency ===
+                System.out.println("\n=== 6. Повторне завантаження збереженого файлу та звірка вмісту ===");
+                ProductRepository reloadedRepo = new ProductRepository();
+                LoadResult reloadResult = productLoader.loadInto(updatedProductsPath, reloadedRepo);
+                System.out.printf("Повторне завантаження %s -> прочитано: %d, додано: %d, відкинуто: %d%n",
+                        updatedProductsPath, reloadResult.totalRead(), reloadResult.addedCount(), reloadResult.rejectedCount());
+
+                boolean contentMatches = areProductListsIdentical(productRepo.findAll(), reloadedRepo.findAll());
+                System.out.println("Вміст репозиторіїв до та після збереження повністю збігається: " + contentMatches);
+            }
+        }
+
+        log.info("Lab 6 demo application finished successfully");
+    }
+
+    private static boolean areProductListsIdentical(List<Product> first, List<Product> second) {
+        if (first.size() != second.size()) {
+            return false;
+        }
+        for (int i = 0; i < first.size(); i++) {
+            Product a = first.get(i);
+            Product b = second.get(i);
+            if (!Objects.equals(a.getSku(), b.getSku())
+                    || !Objects.equals(a.getTitle(), b.getTitle())
+                    || Double.compare(a.getPrice(), b.getPrice()) != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }
