@@ -9,10 +9,8 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import ua.store.json.JacksonConfig;
 
 /**
  * Generic file storage supporting both JSON and YAML formats with ISO-8601 date
@@ -28,15 +26,8 @@ public class FileStorage<T> {
 
     public FileStorage(Class<T> type) {
         this.type = Objects.requireNonNull(type, "Entity class type must not be null");
-        this.jsonMapper = configureMapper(JsonMapper.builder().build());
-        this.yamlMapper = configureMapper(YAMLMapper.builder().build());
-    }
-
-    private static ObjectMapper configureMapper(ObjectMapper mapper) {
-        return mapper
-                .registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .enable(SerializationFeature.INDENT_OUTPUT);
+        this.jsonMapper = JacksonConfig.createJsonMapper();
+        this.yamlMapper = JacksonConfig.createYamlMapper();
     }
 
     private ObjectMapper mapperFor(Path file) {

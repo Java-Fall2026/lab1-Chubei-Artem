@@ -9,4 +9,4 @@ bin/
 .vscode/
 .DS_Store
 
-data/products_updated.yaml
+output/
